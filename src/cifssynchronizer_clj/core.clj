@@ -9,27 +9,52 @@
 ;AGPL (http:www.gnu.org/licenses/agpl-3.0.txt) for more details.
 
 (ns cifssynchronizer-clj.core
-  (:gen-class)
-  (:require [cifssynchronizer-clj.checker :refer (create-checker shared-files shared-files url-queue)])
-  (:import [jcifs.smb NtlmPasswordAuthentication SmbFile]))
+  (:use org.httpkit.server)
+  (:require [cifssynchronizer-clj.cifs-checker :refer :all])
+  (:require [cheshire.core :refer :all])
+  (:require [cifssynchronizer-clj.checker :refer [create-checker shared-files]])
+  (:gen-class))
 
-(defn read-from-url
-  [url]
-  (.listFiles (SmbFile. url (NtlmPasswordAuthentication. "uci" "rlsalgado" "Jekyllmarzo.2016"))))
+(def exist-files? (promise))
 
-(defn is-directory
-  [file]
-  (.isDirectory file))
+(def LOGIN 0)
 
-(defn as-url
-  [d] (.toString d))
+(def PROPERTIES 1)
 
-(defn observer
-  [old new]
-  ;  (printf "old=%s new=%s\n" (count old) (count new)))
-  )
+(def pos (atom 0))
 
-(defn test1
-  []
-  (create-checker 25 "smb://10.1.6.1/descargas$/" read-from-url is-directory as-url observer identity))
+(defmulti get-file-properties
+  ""
+  (fn [data] (:tag data)))
+
+(defmethod get-file-properties LOGIN
+  [{:keys [channel url user password]}]
+  (future (create-checker :threads 25
+            :initial-url url
+            :read-from-url* (partial read-from-url :user user :password password :url)
+            :is-directory* is-directory
+            :to-url* to-url
+            :observer #(when-not (zero? (count %2)) (deliver exist-files? true))))
+  (get-file-properties {:tag PROPERTIES :channel channel}))
+
+(defmethod get-file-properties PROPERTIES
+  [{:keys [channel]}]
+  (when @exist-files?
+    (when-let [file (get @shared-files @pos)]
+      (swap! pos inc)
+      (send! channel (->> file get-properties generate-string)))))
+
+(defn async-handler [ring-request]
+  ""
+  (with-channel ring-request channel
+    (if (websocket? channel)
+      (on-receive channel #(get-file-properties (assoc (parse-string % true) :channel channel)))
+      (send! channel {:status 200
+                      :headers {"Content-Type" "text/plain"}
+                      :body "You need to do a websocket request!"}))))
+
+(defn -main
+  ""
+  [& args]
+  (run-server async-handler {:port 8080}))
 

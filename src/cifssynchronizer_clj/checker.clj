@@ -72,7 +72,8 @@
   observer => what to do with the updates.
   file-filter* => which files to keep.
   "
-  [threads initial-url read-from-url* is-directory* to-url* observer file-filter*]
+  [& {:keys [threads initial-url read-from-url* is-directory* to-url* observer file-filter*]
+      :or {threads 4 file-filter* identity}}]
   (def read-from-url read-from-url*)
   (def is-directory is-directory*)
   (def to-url to-url*)
@@ -83,5 +84,3 @@
   (.put url-queue initial-url)
   (def agents (set (repeatedly threads #(agent {::t #'get-url :queue url-queue}))))
   (run))
-
-
