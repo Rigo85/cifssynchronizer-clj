@@ -15,13 +15,9 @@
   (:require [cifssynchronizer-clj.checker :refer [create-checker shared-files]])
   (:gen-class))
 
-(def exist-files? (promise))
+(def ^:const LOGIN 0)
 
-(def LOGIN 0)
-
-(def PROPERTIES 1)
-
-(def pos (atom 0))
+(def ^:const PROPERTIES 1)
 
 (defmulti get-file-properties
   ""
@@ -29,12 +25,14 @@
 
 (defmethod get-file-properties LOGIN
   [{:keys [channel url user password]}]
+  (def exist-files? (promise))
   (future (create-checker :threads 25
             :initial-url url
             :read-from-url* (partial read-from-url :user user :password password :url)
             :is-directory* is-directory
             :to-url* to-url
             :observer #(when-not (zero? (count %2)) (deliver exist-files? true))))
+  (def pos (atom 0))
   (get-file-properties {:tag PROPERTIES :channel channel}))
 
 (defmethod get-file-properties PROPERTIES
