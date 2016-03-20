@@ -81,7 +81,7 @@
   (def file-filter file-filter*)
   (add-watch shared-files :observer (fn [key identity old new] (observer old new)))
   (reset! shared-files [])
-  (.clear url-queue)
+  (def url-queue (LinkedBlockingQueue.))
   (.put url-queue initial-url)
   (def agents (set (repeatedly threads #(agent {::t #'get-url :queue url-queue}))))
   (run))
