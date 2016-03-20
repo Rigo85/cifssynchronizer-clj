@@ -31,8 +31,7 @@
   "Take one URL from 'url-queue' and get the content."
   [{:keys [^BlockingQueue queue] :as state}]
   (try
-    {:content (->> queue .take read-from-url)
-     ::t #'handle-results}
+    {:content (->> queue .take read-from-url) ::t #'handle-results}
     (catch Exception e
       ;; skip any URL we failed to load
       state)
@@ -43,10 +42,12 @@
   put 'directories' in  'url-queue' and 'files' in 'shared-files'"
   [{:keys [content]}]
   (try
-    (let [{:keys [directories files]} (group-by #(if (is-directory %) :directories :files) content)]
-      (doseq [d directories]
-        (.put url-queue (to-url d)))
-      (swap! shared-files (partial apply conj) (filterv file-filter files))
+    (do
+      (when (not-empty content)
+        (let [{:keys [directories files]} (group-by #(if (is-directory %) :directories :files) content)]
+          (doseq [d directories]
+            (.put url-queue (to-url d)))
+          (swap! shared-files (partial apply conj) (filterv file-filter files))))
       {::t #'get-url :queue url-queue})
     (finally (run *agent*))))
 

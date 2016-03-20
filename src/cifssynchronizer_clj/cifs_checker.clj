@@ -15,14 +15,16 @@
 (defn read-from-url
   "Read files using cifs"
   [& {:keys [url user password] :or {url "" user "" password ""}}]
-  (->> user
-    (#(split % #"\\"))
-    (#(if (second %) % (cons "" %)))
-    vec
-    (#(conj % password))
-    (#(NtlmPasswordAuthentication. (get % 0) (get % 1) (get % 2)))
-    (SmbFile. url)
-    .listFiles))
+  (try (->> user
+         (#(split % #"\\"))
+         (#(if (second %) % (cons "" %)))
+         vec
+         (#(conj % password))
+         (#(NtlmPasswordAuthentication. (get % 0) (get % 1) (get % 2)))
+         (SmbFile. url)
+         .listFiles)
+    (catch Throwable e
+      (make-array jcifs.smb.SmbFile 0))))
 
 (defn is-directory
   ""
