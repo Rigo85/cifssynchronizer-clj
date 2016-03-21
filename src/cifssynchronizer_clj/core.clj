@@ -32,14 +32,13 @@
             :is-directory* is-directory
             :to-url* to-url
             :observer #(when-not (zero? (count %2)) (deliver exist-files? true))))
-  (def pos (atom 0))
+  (def pos (atom -1))
   (get-file-properties {:tag PROPERTIES :channel channel}))
 
 (defmethod get-file-properties PROPERTIES
   [{:keys [channel]}]
   (when @exist-files?
-    (when-let [file (get @shared-files @pos)]
-      (swap! pos inc)
+    (when-let [file (get @shared-files (swap! pos inc))]
       (send! channel (->> file get-properties generate-string)))))
 
 (defn async-handler [ring-request]
