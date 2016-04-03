@@ -23,8 +23,8 @@
          (#(NtlmPasswordAuthentication. (get % 0) (get % 1) (get % 2)))
          (SmbFile. url)
          .listFiles)
-    (catch Throwable e
-      (make-array jcifs.smb.SmbFile 0))))
+       (catch Throwable e
+         (make-array SmbFile 0))))
 
 (defn is-directory
   ""
